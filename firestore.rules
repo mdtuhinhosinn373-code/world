@@ -1,0 +1,154 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Basic helpers
+    function isSignedIn() { return request.auth != null; }
+    
+    // Admin list
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.uid == 'ZPHYftpJzjhllADJsPkCnq4wHm93' ||
+        request.auth.token.get('email', '').lower() == 'mdtuhinhosinn373@gmail.com' ||
+        request.auth.token.get('email', '').lower() == 'mdtuhinhosinn@gmail.com'
+      );
+    }
+
+    // Ownership helper
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    
+    // Document ownership check (for delete/update)
+    function isDocOwner() {
+      return isSignedIn() && resource != null && (
+        (resource.data.get('userId', '') != '' && resource.data.get('userId', '') == request.auth.uid) ||
+        (resource.data.get('authorId', '') != '' && resource.data.get('authorId', '') == request.auth.uid)
+      );
+    }
+
+    // Default: Deny everything
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isAdmin();
+      
+      match /notifications/{notifId} {
+        allow read, update, delete: if isOwner(userId) || isAdmin();
+        allow create: if isSignedIn();
+      }
+
+      match /followers/{followerId} {
+        allow read: if true;
+        allow write: if isOwner(followerId) || isOwner(userId) || isAdmin();
+      }
+
+      match /following/{followingId} {
+        allow read: if true;
+        allow write: if isOwner(userId) || isAdmin();
+      }
+
+      match /savedPosts/{postId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      match /blockedUsers/{blockedUserId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      match /notInterested/{postId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      match /sessions/{sessionId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Videos/Posts Collection
+    match /videos/{videoId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.get('userId', '') == request.auth.uid;
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        (isDocOwner() && request.resource.data.get('userId', '') == resource.data.get('userId', '')) || 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'commentCount', 'views', 'viewsCount'])
+      );
+      allow delete: if isAdmin() || isDocOwner();
+      
+      match /likes/{likeId} {
+        allow read: if true;
+        allow write: if isSignedIn() && (request.auth.uid == likeId || isAdmin());
+      }
+      
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() && request.resource.data.get('userId', '') == request.auth.uid;
+        allow update: if isSignedIn() && (resource.data.get('userId', '') == request.auth.uid || isAdmin());
+        allow delete: if isSignedIn() && (
+          resource.data.get('userId', '') == request.auth.uid || 
+          get(/databases/$(database)/documents/videos/$(videoId)).data.get('userId', '') == request.auth.uid ||
+          isAdmin()
+        );
+      }
+    }
+
+    // Stories Collection
+    match /stories/{storyId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.get('userId', '') == request.auth.uid;
+      allow update: if (
+        isAdmin() || 
+        (isDocOwner() && request.resource.data.get('userId', '') == resource.data.get('userId', '')) || 
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewers']))
+      );
+      allow delete: if isAdmin() || isDocOwner();
+    }
+
+    // Internal Docs
+    match /_internal/{docId} {
+      allow read: if true;
+    }
+
+    // Music Collection
+    match /music/{musicId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.get('creatorId', '') == request.auth.uid;
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        resource.data.get('creatorId', '') == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount'])
+      );
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.get('creatorId', '') == request.auth.uid);
+    }
+
+    // Direct Messages Collection
+    match /direct_messages/{messageId} {
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants);
+      allow create: if isSignedIn() && (request.auth.uid == request.resource.data.senderId) && (request.auth.uid in request.resource.data.participants);
+      allow update: if isAdmin() || (isSignedIn() && (request.auth.uid in resource.data.participants));
+      allow delete: if isAdmin() || (isSignedIn() && (resource.data.senderId == request.auth.uid));
+    }
+
+    // Reports Collection
+    match /reports/{reportId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Copyright Claims Collection
+    match /copyrightClaims/{claimId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Products (Marketplace) Collection
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.get('userId', '') == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.get('userId', '') == request.auth.uid);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.get('userId', '') == request.auth.uid);
+    }
+  }
+}

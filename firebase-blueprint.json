@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile information and settings",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "bio": { "type": "string" },
+        "profilePhoto": { "type": "string" },
+        "coverPhoto": { "type": "string" },
+        "coinBalance": { "type": "number" },
+        "isVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Video": {
+      "title": "Video Post",
+      "description": "Video or image post shared by users",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["video", "image"] },
+        "likeCount": { "type": "number" },
+        "commentCount": { "type": "number" },
+        "views": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Story": {
+      "title": "User Story",
+      "description": "Temporary 24h story content",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["video", "image", "text"] },
+        "url": { "type": "string" },
+        "content": { "type": "string" },
+        "backgroundColor": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Music": {
+      "title": "Music Track",
+      "description": "Music or original sound that can be used in videos",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "artist": { "type": "string" },
+        "url": { "type": "string" },
+        "language": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "useCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "DirectMessage": {
+      "title": "Direct Message",
+      "description": "Real-time direct message between users",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderPhoto": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "receiverName": { "type": "string" },
+        "receiverPhoto": { "type": "string" },
+        "text": { "type": "string" },
+        "participants": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Product": {
+      "title": "Marketplace Product",
+      "description": "Product details listed in the marketplace",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "userId": { "type": "string" },
+        "sellerName": { "type": "string" },
+        "sellerPhoto": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/videos/{videoId}": {
+      "schema": "Video",
+      "description": "Short form video and photo posts"
+    },
+    "/stories/{storyId}": {
+      "schema": "Story",
+      "description": "24-hour expiration stories"
+    },
+    "/music/{musicId}": {
+      "schema": "Music",
+      "description": "Global music library including user original sounds"
+    },
+    "/direct_messages/{messageId}": {
+      "schema": "DirectMessage",
+      "description": "Direct message thread entries"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Products listed for sale in the marketplace"
+    }
+  }
+}

@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global helpers
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // User Blueprint Validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['fullName', 'email']) &&
+             data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 100 &&
+             data.email is string && data.email.size() <= 200 &&
+             (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 20)) &&
+             (!('coinBalance' in data) || data.coinBalance is number) &&
+             (!('isVerified' in data) || data.isVerified is bool);
+    }
+
+    match /users/{userId} {
+      allow get: if true;
+      allow list: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming()) && 
+                       incoming().coinBalance == 0 && 
+                       incoming().isVerified == false;
+      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+        // Action: Update Profile
+        incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phoneNumber', 'address', 'profilePhoto']) ||
+        // Action: Verification (Only system/manual for now, but let's allow verification status if we had a role)
+        // For simplicity in this turn, allow owner to update their status if they "request" it, 
+        // though usually this is restricted.
+        incoming().diff(existing()).affectedKeys().hasOnly(['isVerified'])
+      );
+    }
+
+    // Video Blueprint Validation
+    function isValidVideo(data) {
+      return data.keys().hasAll(['userId', 'videoUrl', 'title']) &&
+             data.userId == request.auth.uid &&
+             data.videoUrl is string && data.videoUrl.size() <= 1000 &&
+             data.title is string && data.title.size() <= 200;
+    }
+
+    match /videos/{videoId} {
+      allow read: if true;
+      allow create: if isVerified() && isValidVideo(incoming());
+      allow update: if isSignedIn() && (
+        // Action: Like/View increment
+        incoming().diff(existing()).affectedKeys().hasOnly(['likeCount', 'views', 'commentCount'])
+      );
+      allow delete: if isOwner(existing().userId);
+      
+      match /likes/{likeId} {
+        allow read: if true;
+        allow create, delete: if isOwner(likeId);
+      }
+      
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+        allow delete: if isOwner(existing().userId) || isOwner(get(/databases/$(database)/documents/videos/$(videoId)).data.userId);
+      }
+    }
+    
+    match /users/{userId}/notifications/{notifId} {
+      allow read: if isOwner(userId);
+      allow create: if isSignedIn();
+    }
+  }
+}

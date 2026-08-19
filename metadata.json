@@ -1,0 +1,28 @@
+{
+  "name": "World Social",
+  "description": "A high-performance short video social platform with professional profile management, privacy controls, and content sharing.",
+  "requestFramePermissions": [
+    "display-capture",
+    "microphone",
+    "camera",
+    "geolocation",
+    "notifications",
+    "wake-lock",
+    "clipboard-read",
+    "clipboard-write",
+    "fullscreen",
+    "window-management",
+    "local-fonts",
+    "speaker-selection",
+    "midi",
+    "accelerometer",
+    "gyroscope",
+    "magnetometer"
+  ],
+  "majorCapabilities": [
+    "VIDEO_SHARING",
+    "SOCIAL_NETREWORKING",
+    "REALTIME_CHAT",
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
